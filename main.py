@@ -44,15 +44,14 @@ can_spawn_ball = True
 MARGIN = 50
 HUD_HEIGHT = 100
 
+# Variável de controle de pausa
+is_paused = False
+
 # Função para desenhar o semáforo
-
-
 def draw_semaphore(screen, color):
     pygame.draw.circle(screen, color, SEMAPHORE_POS, SEMAPHORE_RADIUS)
 
 # Função para desenhar o texto na tela
-
-
 def draw_text(screen, text, size, color, position):
     font = pygame.font.Font(None, size)
     text_surface = font.render(text, True, color)
@@ -60,8 +59,6 @@ def draw_text(screen, text, size, color, position):
     screen.blit(text_surface, text_rect)
 
 # Função para gerar uma nova bolinha
-
-
 def spawn_ball():
     global can_spawn_ball
     if len(balls) < 5:
@@ -71,8 +68,6 @@ def spawn_ball():
         can_spawn_ball = False
 
 # Função para verificar colisão com as bolinhas e spawnar nova bolinha
-
-
 def check_collision_and_spawn():
     global score, can_spawn_ball
     head_x, head_y = snake_segments[0]
@@ -86,9 +81,8 @@ def check_collision_and_spawn():
             spawn_ball()
 
 # Função principal do jogo
-
 def main():
-    global snake_segments, snake_direction, can_spawn_ball, score
+    global snake_segments, snake_direction, can_spawn_ball, score, is_paused
 
     # Inicialização da tela
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -129,47 +123,48 @@ def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key in keys_pressed:
                     keys_pressed[event.key] = True
+                elif event.key == pygame.K_SPACE:
+                    is_paused = not is_paused
             elif event.type == pygame.KEYUP:
                 if event.key in keys_pressed:
                     keys_pressed[event.key] = False
 
-        # Atualizar a direção da cobra com base nas teclas pressionadas
-        if keys_pressed[pygame.K_UP] and snake_direction != 'DOWN':
-            snake_direction = 'UP'
-        elif keys_pressed[pygame.K_DOWN] and snake_direction != 'UP':
-            snake_direction = 'DOWN'
-        elif keys_pressed[pygame.K_LEFT] and snake_direction != 'RIGHT':
-            snake_direction = 'LEFT'
-        elif keys_pressed[pygame.K_RIGHT] and snake_direction != 'LEFT':
-            snake_direction = 'RIGHT'
-        else:
-            snake_direction = None
+        if not is_paused:
+            # Atualizar a direção da cobra com base nas teclas pressionadas
+            if keys_pressed[pygame.K_UP] and snake_direction != 'DOWN':
+                snake_direction = 'UP'
+            elif keys_pressed[pygame.K_DOWN] and snake_direction != 'UP':
+                snake_direction = 'DOWN'
+            elif keys_pressed[pygame.K_LEFT] and snake_direction != 'RIGHT':
+                snake_direction = 'LEFT'
+            elif keys_pressed[pygame.K_RIGHT] and snake_direction != 'LEFT':
+                snake_direction = 'RIGHT'
 
-        if not game_over and snake_direction is not None:
-            # Atualizar posição da cobra
-            head_x, head_y = snake_segments[0]
-            if snake_direction == 'UP':
-                head_y -= SEGMENT_SIZE
-            elif snake_direction == 'DOWN':
-                head_y += SEGMENT_SIZE
-            elif snake_direction == 'LEFT':
-                head_x -= SEGMENT_SIZE
-            elif snake_direction == 'RIGHT':
-                head_x += SEGMENT_SIZE
+            if not game_over:
+                if snake_direction is not None and semaphore_color == RED:
+                    game_over = True
+                else:
+                    if snake_direction is not None:
+                        # Atualizar posição da cobra
+                        head_x, head_y = snake_segments[0]
+                        if snake_direction == 'UP':
+                            head_y -= SEGMENT_SIZE
+                        elif snake_direction == 'DOWN':
+                            head_y += SEGMENT_SIZE
+                        elif snake_direction == 'LEFT':
+                            head_x -= SEGMENT_SIZE
+                        elif snake_direction == 'RIGHT':
+                            head_x += SEGMENT_SIZE
 
-            # Verificar colisão com as bordas da tela
-            if head_x < 0 or head_x >= WIDTH or head_y < 0 or head_y >= HEIGHT:
-                game_over = True
-            else:
-                snake_segments.insert(0, [head_x, head_y])
-                snake_segments.pop()
+                        # Verificar colisão com as bordas da tela
+                        if head_x < 0 or head_x >= WIDTH or head_y < 0 or head_y >= HEIGHT:
+                            game_over = True
+                        else:
+                            snake_segments.insert(0, [head_x, head_y])
+                            snake_segments.pop()
 
-            # Verificar se a cobra está no lado direito da tela quando o semáforo está vermelho
-            if head_x >= WIDTH // 2 and semaphore_color == RED:
-                game_over = True
-
-            # Verificar colisão com as bolinhas e spawnar nova bolinha
-            check_collision_and_spawn()
+                        # Verificar colisão com as bolinhas e spawnar nova bolinha
+                        check_collision_and_spawn()
 
         # Limpar a tela
         screen.fill(BLACK)
