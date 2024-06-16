@@ -80,9 +80,38 @@ def check_collision_and_spawn():
             score += 1
             spawn_ball()
 
+# Função para reiniciar o jogo
+def restart_game():
+    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_index, semaphore_color
+
+    # Posição inicial da cobra
+    initial_x = WIDTH // 2
+    initial_y = HEIGHT - 50
+    snake_segments = [[initial_x, initial_y - i * SEGMENT_SIZE] for i in range(INITIAL_SNAKE_LENGTH)]
+
+    # Reiniciar direção da cobra
+    snake_direction = None
+
+    # Reiniciar semáforo
+    semaphore_timer = 0
+    semaphore_index = 0  # Começa com vermelho
+    semaphore_color = SEMAPHORE_COLORS[semaphore_index]
+
+    # Reiniciar estado do jogo
+    game_over = False
+    is_paused = False
+
+    # Reiniciar pontuação
+    score = 0
+
+    # Limpar bolinhas e gerar novas
+    balls.clear()
+    for _ in range(10):
+        spawn_ball()
+
 # Função principal do jogo
 def main():
-    global snake_segments, snake_direction, can_spawn_ball, score, is_paused
+    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_index, semaphore_color
 
     # Inicialização da tela
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -91,27 +120,8 @@ def main():
     # Relógio para controle de FPS
     clock = pygame.time.Clock()
 
-    # Posição inicial da cobra
-    initial_x = WIDTH // 2
-    initial_y = HEIGHT - 50
-    snake_segments = [[initial_x, initial_y - i * SEGMENT_SIZE]
-                      for i in range(INITIAL_SNAKE_LENGTH)]
-
-    # Contador para mudança de cor do semáforo
-    semaphore_timer = 0
-    semaphore_index = 0  # Começa com vermelho
-    # Inicializando a cor do semáforo
-    semaphore_color = SEMAPHORE_COLORS[semaphore_index]
-
-    # Variável para controlar o estado do jogo
-    game_over = False
-
-    # Variável para pontuação
-    score = 0
-
-    # Gerar mais bolinhas no início
-    for _ in range(10):
-        spawn_ball()
+    # Reiniciar o jogo pela primeira vez
+    restart_game()
 
     # Loop principal do jogo
     while True:
@@ -125,11 +135,13 @@ def main():
                     keys_pressed[event.key] = True
                 elif event.key == pygame.K_SPACE:
                     is_paused = not is_paused
+                elif event.key == pygame.K_r and game_over:
+                    restart_game()
             elif event.type == pygame.KEYUP:
                 if event.key in keys_pressed:
                     keys_pressed[event.key] = False
 
-        if not is_paused:
+        if not is_paused and not game_over:
             # Atualizar a direção da cobra com base nas teclas pressionadas
             if keys_pressed[pygame.K_UP] and snake_direction != 'DOWN':
                 snake_direction = 'UP'
@@ -140,31 +152,30 @@ def main():
             elif keys_pressed[pygame.K_RIGHT] and snake_direction != 'LEFT':
                 snake_direction = 'RIGHT'
 
-            if not game_over:
-                if snake_direction is not None and semaphore_color == RED:
-                    game_over = True
-                else:
-                    if snake_direction is not None:
-                        # Atualizar posição da cobra
-                        head_x, head_y = snake_segments[0]
-                        if snake_direction == 'UP':
-                            head_y -= SEGMENT_SIZE
-                        elif snake_direction == 'DOWN':
-                            head_y += SEGMENT_SIZE
-                        elif snake_direction == 'LEFT':
-                            head_x -= SEGMENT_SIZE
-                        elif snake_direction == 'RIGHT':
-                            head_x += SEGMENT_SIZE
+            if snake_direction is not None and semaphore_color == RED:
+                game_over = True
+            else:
+                if snake_direction is not None:
+                    # Atualizar posição da cobra
+                    head_x, head_y = snake_segments[0]
+                    if snake_direction == 'UP':
+                        head_y -= SEGMENT_SIZE
+                    elif snake_direction == 'DOWN':
+                        head_y += SEGMENT_SIZE
+                    elif snake_direction == 'LEFT':
+                        head_x -= SEGMENT_SIZE
+                    elif snake_direction == 'RIGHT':
+                        head_x += SEGMENT_SIZE
 
-                        # Verificar colisão com as bordas da tela
-                        if head_x < 0 or head_x >= WIDTH or head_y < 0 or head_y >= HEIGHT:
-                            game_over = True
-                        else:
-                            snake_segments.insert(0, [head_x, head_y])
-                            snake_segments.pop()
+                    # Verificar colisão com as bordas da tela
+                    if head_x < 0 or head_x >= WIDTH or head_y < 0 or head_y >= HEIGHT:
+                        game_over = True
+                    else:
+                        snake_segments.insert(0, [head_x, head_y])
+                        snake_segments.pop()
 
-                        # Verificar colisão com as bolinhas e spawnar nova bolinha
-                        check_collision_and_spawn()
+                    # Verificar colisão com as bolinhas e spawnar nova bolinha
+                    check_collision_and_spawn()
 
         # Limpar a tela
         screen.fill(BLACK)
@@ -172,13 +183,11 @@ def main():
         # Desenhar os elementos do jogo
         draw_semaphore(screen, semaphore_color)
         for segment in snake_segments:
-            pygame.draw.rect(
-                screen, WHITE, (*segment, SEGMENT_SIZE, SEGMENT_SIZE))
+            pygame.draw.rect(screen, WHITE, (*segment, SEGMENT_SIZE, SEGMENT_SIZE))
 
         # Desenhar o pixel indicando a frente da cobra
         head_x, head_y = snake_segments[0]
-        pygame.draw.circle(screen, DARK_RED, (head_x +
-                           SEGMENT_SIZE // 2, head_y + SEGMENT_SIZE // 2), 3)
+        pygame.draw.circle(screen, DARK_RED, (head_x + SEGMENT_SIZE // 2, head_y + SEGMENT_SIZE // 2), 3)
 
         for ball in balls:
             pygame.draw.circle(screen, BALL_COLOR, ball, BALL_RADIUS)
@@ -187,12 +196,11 @@ def main():
         pygame.draw.rect(screen, WHITE, (0, 0, WIDTH, HEIGHT), 5)
 
         if game_over:
-            draw_text(screen, "Você perdeu!", 50,
-                      RED, (WIDTH // 2, HEIGHT // 2))
+            draw_text(screen, "Você perdeu!", 50, RED, (WIDTH // 2, HEIGHT // 2))
+            draw_text(screen, "Pressione 'R' para reiniciar", 30, WHITE, (WIDTH // 2, HEIGHT // 2 + 50))
         else:
             draw_text(screen, f"Pontuação: {score}", 30, WHITE, (WIDTH // 2, 30))
-            draw_text(screen, f"Tempo: {RED_INTERVAL - semaphore_timer:.1f}" if semaphore_color ==
-                      RED else f"Tempo: {GREEN_INTERVAL - semaphore_timer:.1f}", 30, WHITE, (WIDTH - 100, 100))
+            draw_text(screen, f"Tempo: {RED_INTERVAL - semaphore_timer:.1f}" if semaphore_color == RED else f"Tempo: {GREEN_INTERVAL - semaphore_timer:.1f}", 30, WHITE, (WIDTH - 100, 100))
 
         # Atualizar a tela
         pygame.display.flip()
