@@ -17,6 +17,7 @@ DARK_RED = (139, 0, 0)  # Cor do olho da cobra
 # Definições de tela
 WIDTH, HEIGHT = 600, 600
 FPS = 10
+SPEED_INCREASE = 0.5  # Aumento da velocidade a cada fruta comida
 
 # Definições da cobra
 SEGMENT_SIZE = 20
@@ -48,6 +49,9 @@ HUD_HEIGHT = 100
 # Variável de controle de pausa
 is_paused = False
 
+# Hit box extra radius
+EXTRA_HITBOX_RADIUS = 10  # Aumentar a hitbox em 10 pixels
+
 # Função para desenhar o semáforo
 def draw_semaphore(screen, color):
     pygame.draw.circle(screen, color, SEMAPHORE_POS, SEMAPHORE_RADIUS)
@@ -70,20 +74,21 @@ def spawn_ball():
 
 # Função para verificar colisão com as bolinhas e spawnar nova bolinha
 def check_collision_and_spawn():
-    global score, can_spawn_ball
+    global score, can_spawn_ball, FPS
     head_x, head_y = snake_segments[0]
     for ball in balls[:]:
         ball_x, ball_y = ball
         distance = ((head_x - ball_x) ** 2 + (head_y - ball_y) ** 2) ** 0.5
-        if distance < SEGMENT_SIZE / 2 + BALL_RADIUS:
+        if distance < SEGMENT_SIZE / 2 + BALL_RADIUS + EXTRA_HITBOX_RADIUS:
             balls.remove(ball)
             can_spawn_ball = True
             score += 1
             spawn_ball()
+            FPS += SPEED_INCREASE  # Aumenta a velocidade da cobra
 
 # Função para reiniciar o jogo
 def restart_game():
-    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_state, semaphore_color, semaphore_total_timer
+    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_state, semaphore_color, semaphore_total_timer, FPS
 
     # Posição inicial da cobra
     initial_x = WIDTH // 2
@@ -111,9 +116,12 @@ def restart_game():
     for _ in range(10):
         spawn_ball()
 
+    # Reiniciar FPS
+    FPS = 10
+
 # Função principal do jogo
 def main():
-    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_state, semaphore_color, semaphore_total_timer
+    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_state, semaphore_color, semaphore_total_timer, FPS
 
     # Inicialização da tela
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
