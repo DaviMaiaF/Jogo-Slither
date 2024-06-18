@@ -10,6 +10,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+YELLOW = (255, 255, 0)
 BLUE = (0, 0, 255)
 DARK_RED = (139, 0, 0)  # Cor do olho da cobra
 
@@ -28,9 +29,9 @@ keys_pressed = {pygame.K_UP: False, pygame.K_DOWN: False,
 # Definições do semáforo
 SEMAPHORE_POS = (WIDTH - 50, 50)  # Posição no canto superior direito
 SEMAPHORE_RADIUS = 30
-SEMAPHORE_COLORS = [RED, GREEN]  # Lista de cores: vermelho e verde
 GREEN_INTERVAL = 5  # Intervalo de tempo para o semáforo verde em segundos
 RED_INTERVAL = 3  # Intervalo de tempo para o semáforo vermelho em segundos
+YELLOW_DURATION = 1  # Duração do semáforo amarelo em segundos
 
 # Lista de bolinhas
 balls = []
@@ -82,7 +83,7 @@ def check_collision_and_spawn():
 
 # Função para reiniciar o jogo
 def restart_game():
-    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_index, semaphore_color
+    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_state, semaphore_color, semaphore_total_timer
 
     # Posição inicial da cobra
     initial_x = WIDTH // 2
@@ -94,8 +95,9 @@ def restart_game():
 
     # Reiniciar semáforo
     semaphore_timer = 0
-    semaphore_index = 0  # Começa com vermelho
-    semaphore_color = SEMAPHORE_COLORS[semaphore_index]
+    semaphore_state = 'GREEN'
+    semaphore_total_timer = GREEN_INTERVAL
+    semaphore_color = GREEN
 
     # Reiniciar estado do jogo
     game_over = False
@@ -111,7 +113,7 @@ def restart_game():
 
 # Função principal do jogo
 def main():
-    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_index, semaphore_color
+    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_state, semaphore_color, semaphore_total_timer
 
     # Inicialização da tela
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -200,7 +202,7 @@ def main():
             draw_text(screen, "Pressione 'R' para reiniciar", 30, WHITE, (WIDTH // 2, HEIGHT // 2 + 50))
         else:
             draw_text(screen, f"Pontuação: {score}", 30, WHITE, (WIDTH // 2, 30))
-            draw_text(screen, f"Tempo: {RED_INTERVAL - semaphore_timer:.1f}" if semaphore_color == RED else f"Tempo: {GREEN_INTERVAL - semaphore_timer:.1f}", 30, WHITE, (WIDTH - 100, 100))
+            draw_text(screen, f"Tempo: {semaphore_total_timer - semaphore_timer:.1f}", 30, WHITE, (WIDTH - 100, 100))
 
         # Atualizar a tela
         pygame.display.flip()
@@ -208,19 +210,26 @@ def main():
         if not game_over:
             # Atualizar o contador do semáforo
             semaphore_timer += 1 / FPS
-            if semaphore_color == RED and semaphore_timer >= RED_INTERVAL:
-                semaphore_timer = 0
-                semaphore_index = (semaphore_index + 1) % len(SEMAPHORE_COLORS)
-            elif semaphore_color == GREEN and semaphore_timer >= GREEN_INTERVAL:
-                semaphore_timer = 0
-                semaphore_index = (semaphore_index + 1) % len(SEMAPHORE_COLORS)
 
-            # Atualizar a cor do semáforo
-            semaphore_color = SEMAPHORE_COLORS[semaphore_index]
+            # Lógica para mudar a cor do semáforo
+            if semaphore_state == 'GREEN' and semaphore_total_timer - semaphore_timer <= YELLOW_DURATION:
+                semaphore_state = 'YELLOW'
+                semaphore_color = YELLOW
+                semaphore_timer = 0
+                semaphore_total_timer = YELLOW_DURATION
+            elif semaphore_state == 'YELLOW' and semaphore_timer >= YELLOW_DURATION:
+                semaphore_state = 'RED'
+                semaphore_color = RED
+                semaphore_timer = 0
+                semaphore_total_timer = RED_INTERVAL
+            elif semaphore_state == 'RED' and semaphore_timer >= RED_INTERVAL:
+                semaphore_state = 'GREEN'
+                semaphore_color = GREEN
+                semaphore_timer = 0
+                semaphore_total_timer = GREEN_INTERVAL
 
         # Limitar o FPS
         clock.tick(FPS)
-
 
 if __name__ == "__main__":
     main()
