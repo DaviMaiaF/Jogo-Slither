@@ -14,6 +14,9 @@ YELLOW = (255, 255, 0)
 BLUE = (0, 0, 255)
 DARK_RED = (139, 0, 0)  # Cor do olho da cobra
 
+original_ball_image = pygame.image.load('Jogo-Slither/img/fruit.png')
+ball_image = pygame.transform.scale(original_ball_image, (28, 28))
+
 # Definições de tela
 WIDTH, HEIGHT = 600, 600
 FPS = 10
@@ -200,7 +203,7 @@ def main():
         pygame.draw.circle(screen, DARK_RED, (head_x + SEGMENT_SIZE // 2, head_y + SEGMENT_SIZE // 2), 3)
 
         for ball in balls:
-            pygame.draw.circle(screen, BALL_COLOR, ball, BALL_RADIUS)
+            screen.blit(ball_image, ball)
 
         # Desenhar a borda do mapa
         pygame.draw.rect(screen, WHITE, (0, 0, WIDTH, HEIGHT), 5)
