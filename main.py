@@ -57,6 +57,7 @@ def draw_text(screen, text, size, color, position):
     text_surface = font.render(text, True, color)
     text_rect = text_surface.get_rect(center=position)
     screen.blit(text_surface, text_rect)
+    return text_rect
 
 # Função para gerar uma nova bolinha
 def spawn_ball():
@@ -125,10 +126,10 @@ def pause_menu(screen):
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
                 # Verifica se o clique foi em "Retornar ao Jogo"
-                if WIDTH // 2 - 100 <= mouse_x <= WIDTH // 2 + 100 and HEIGHT // 2 - 30 <= mouse_y <= HEIGHT // 2 + 10:
+                if resume_button.collidepoint(mouse_x, mouse_y):
                     return  # Retorna ao jogo
                 # Verifica se o clique foi em "Sair"
-                elif WIDTH // 2 - 50 <= mouse_x <= WIDTH // 2 + 50 and HEIGHT // 2 + 40 <= mouse_y <= HEIGHT // 2 + 80:
+                elif exit_button.collidepoint(mouse_x, mouse_y):
                     pygame.quit()
                     sys.exit()
 
@@ -140,8 +141,48 @@ def pause_menu(screen):
 
         # Desenha o texto do menu de pausa
         draw_text(screen, "Jogo Pausado", 50, WHITE, (WIDTH // 2, HEIGHT // 4))
-        draw_text(screen, "Retornar ao Jogo", 30, WHITE, (WIDTH // 2, HEIGHT // 2))
-        draw_text(screen, "Sair", 30, WHITE, (WIDTH // 2, HEIGHT // 2 + 60))
+
+        # Desenha os botões
+        resume_button = draw_text(screen, "Retornar ao Jogo", 30, WHITE, (WIDTH // 2, HEIGHT // 2))
+        pygame.draw.rect(screen, WHITE, resume_button.inflate(20, 10), 2)
+
+        exit_button = draw_text(screen, "Sair", 30, WHITE, (WIDTH // 2, HEIGHT // 2 + 60))
+        pygame.draw.rect(screen, WHITE, exit_button.inflate(20, 10), 2)
+
+        # Atualiza a tela
+        pygame.display.flip()
+
+# Função para desenhar o menu principal
+def main_menu(screen):
+    menu_active = True
+    while menu_active:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                # Verifica se o clique foi em "Iniciar Jogo"
+                if start_button.collidepoint(mouse_x, mouse_y):
+                    return  # Inicia o jogo
+                # Verifica se o clique foi em "Sair"
+                elif exit_button.collidepoint(mouse_x, mouse_y):
+                    pygame.quit()
+                    sys.exit()
+
+        # Desenha o fundo
+        screen.fill(BLACK)
+
+        # Desenha os botões
+        start_button = draw_text(screen, "Iniciar Jogo", 30, WHITE, (WIDTH // 2, HEIGHT // 2))
+        pygame.draw.rect(screen, WHITE, start_button.inflate(20, 10), 2)
+
+        exit_button = draw_text(screen, "Sair", 30, WHITE, (WIDTH // 2, HEIGHT // 2 + 60))
+        pygame.draw.rect(screen, WHITE, exit_button.inflate(20, 10), 2)
+
+        # Desenha o texto do menu principal
+        draw_text(screen, "Bem vindo ao", 50, WHITE, (WIDTH // 2, HEIGHT // 4))
+        draw_text(screen, "Slither game", 50, WHITE, (WIDTH // 2, HEIGHT // 4 + 60))
 
         # Atualiza a tela
         pygame.display.flip()
@@ -156,6 +197,9 @@ def game_logic():
 
     # Relógio para controle de FPS
     clock = pygame.time.Clock()
+
+    # Exibir o menu principal
+    main_menu(screen)
 
     # Reiniciar o jogo pela primeira vez
     restart_game()
@@ -249,7 +293,10 @@ def game_logic():
         # Limitar o FPS
         clock.tick(FPS)
 
-# Iniciar a lógica do jogo
-if __name__ == "__main__":
-    game_logic()
+# Função para iniciar o jogo em uma thread separada
+def start_game_thread():
+    threading.Thread(target=game_logic).start()
 
+# Função principal
+if __name__ == "__main__":
+    start_game_thread()
