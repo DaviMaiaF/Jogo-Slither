@@ -7,6 +7,13 @@ from threading import Semaphore
 # Inicialização do Pygame
 pygame.init()
 
+# Inicialização do mixer de áudio
+pygame.mixer.init()
+
+# Carregar a música de fundo
+pygame.mixer.music.load('Jogo-Slither/Eric Skiff - Underclocked ♫ NO COPYRIGHT 8-bit Music + Background (128).mp3')
+
+
 # Definições de cores
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -190,6 +197,9 @@ def main_menu(screen):
 # Função principal do jogo
 def game_logic():
     global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over
+
+    # Tocar a música de fundo em loop
+    pygame.mixer.music.play(-1)
 
     # Inicialização da tela
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
