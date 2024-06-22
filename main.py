@@ -11,7 +11,7 @@ pygame.init()
 pygame.mixer.init()
 
 # Carregar a música de fundo
-pygame.mixer.music.load('Jogo-Slither/Eric Skiff - Underclocked ♫ NO COPYRIGHT 8-bit Music + Background (128).mp3')
+pygame.mixer.music.load('audio/Eric Skiff - Underclocked ♫ NO COPYRIGHT 8-bit Music + Background (128).mp3')
 
 
 # Definições de cores
@@ -23,7 +23,7 @@ YELLOW = (255, 255, 0)
 BLUE = (0, 0, 255)
 DARK_RED = (139, 0, 0)  # Cor do olho da cobra
 
-original_ball_image = pygame.image.load('Jogo-Slither/img/fruit.png')
+original_ball_image = pygame.image.load('img/fruit.png')
 ball_image = pygame.transform.scale(original_ball_image, (28, 28))
 
 # Definições de tela
