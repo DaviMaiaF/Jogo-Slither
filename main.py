@@ -1,6 +1,8 @@
 import pygame
 import sys
 import random
+import threading
+from threading import Semaphore
 
 # Inicialização do Pygame
 pygame.init()
@@ -30,13 +32,6 @@ snake_direction = None  # Direção inicial definida como None
 keys_pressed = {pygame.K_UP: False, pygame.K_DOWN: False,
                 pygame.K_LEFT: False, pygame.K_RIGHT: False}
 
-# Definições do semáforo
-SEMAPHORE_POS = (WIDTH - 50, 50)  # Posição no canto superior direito
-SEMAPHORE_RADIUS = 30
-GREEN_INTERVAL = 5  # Intervalo de tempo para o semáforo verde em segundos
-RED_INTERVAL = 3  # Intervalo de tempo para o semáforo vermelho em segundos
-YELLOW_DURATION = 1  # Duração do semáforo amarelo em segundos
-
 # Lista de bolinhas
 balls = []
 BALL_RADIUS = 10
@@ -51,13 +46,10 @@ HUD_HEIGHT = 100
 
 # Variável de controle de pausa
 is_paused = False
+pause_semaphore = Semaphore(1)  # Semáforo para controle de pausa
 
 # Hit box extra radius
 EXTRA_HITBOX_RADIUS = 10  # Aumentar a hitbox em 10 pixels
-
-# Função para desenhar o semáforo
-def draw_semaphore(screen, color):
-    pygame.draw.circle(screen, color, SEMAPHORE_POS, SEMAPHORE_RADIUS)
 
 # Função para desenhar o texto na tela
 def draw_text(screen, text, size, color, position):
@@ -65,6 +57,7 @@ def draw_text(screen, text, size, color, position):
     text_surface = font.render(text, True, color)
     text_rect = text_surface.get_rect(center=position)
     screen.blit(text_surface, text_rect)
+    return text_rect
 
 # Função para gerar uma nova bolinha
 def spawn_ball():
@@ -77,7 +70,7 @@ def spawn_ball():
 
 # Função para verificar colisão com as bolinhas e spawnar nova bolinha
 def check_collision_and_spawn():
-    global score, can_spawn_ball, FPS
+    global can_spawn_ball, FPS
     head_x, head_y = snake_segments[0]
     for ball in balls[:]:
         ball_x, ball_y = ball
@@ -85,13 +78,15 @@ def check_collision_and_spawn():
         if distance < SEGMENT_SIZE / 2 + BALL_RADIUS + EXTRA_HITBOX_RADIUS:
             balls.remove(ball)
             can_spawn_ball = True
-            score += 1
             spawn_ball()
+            with pause_semaphore:
+                global score
+                score += 1
             FPS += SPEED_INCREASE  # Aumenta a velocidade da cobra
 
 # Função para reiniciar o jogo
 def restart_game():
-    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_state, semaphore_color, semaphore_total_timer, FPS
+    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over
 
     # Posição inicial da cobra
     initial_x = WIDTH // 2
@@ -100,12 +95,6 @@ def restart_game():
 
     # Reiniciar direção da cobra
     snake_direction = None
-
-    # Reiniciar semáforo
-    semaphore_timer = 0
-    semaphore_state = 'GREEN'
-    semaphore_total_timer = GREEN_INTERVAL
-    semaphore_color = GREEN
 
     # Reiniciar estado do jogo
     game_over = False
@@ -122,9 +111,85 @@ def restart_game():
     # Reiniciar FPS
     FPS = 10
 
+# Função para desenhar o menu de pausa
+def pause_menu(screen):
+    menu_active = True
+    while menu_active:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return  # Retorna ao jogo sem exibir o menu de pausa
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                # Verifica se o clique foi em "Retornar ao Jogo"
+                if resume_button.collidepoint(mouse_x, mouse_y):
+                    return  # Retorna ao jogo
+                # Verifica se o clique foi em "Sair"
+                elif exit_button.collidepoint(mouse_x, mouse_y):
+                    pygame.quit()
+                    sys.exit()
+
+        # Desenha o fundo semi-transparente
+        pause_bg = pygame.Surface((WIDTH, HEIGHT))
+        pause_bg.set_alpha(128)  # Configura a transparência
+        pause_bg.fill(BLACK)
+        screen.blit(pause_bg, (0, 0))
+
+        # Desenha o texto do menu de pausa
+        draw_text(screen, "Jogo Pausado", 50, WHITE, (WIDTH // 2, HEIGHT // 4))
+
+        # Desenha os botões
+        resume_button = draw_text(screen, "Retornar ao Jogo", 30, WHITE, (WIDTH // 2, HEIGHT // 2))
+        pygame.draw.rect(screen, WHITE, resume_button.inflate(20, 10), 2)
+
+        exit_button = draw_text(screen, "Sair", 30, WHITE, (WIDTH // 2, HEIGHT // 2 + 60))
+        pygame.draw.rect(screen, WHITE, exit_button.inflate(20, 10), 2)
+
+        # Atualiza a tela
+        pygame.display.flip()
+
+# Função para desenhar o menu principal
+def main_menu(screen):
+    menu_active = True
+    while menu_active:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                # Verifica se o clique foi em "Iniciar Jogo"
+                if start_button.collidepoint(mouse_x, mouse_y):
+                    return  # Inicia o jogo
+                # Verifica se o clique foi em "Sair"
+                elif exit_button.collidepoint(mouse_x, mouse_y):
+                    pygame.quit()
+                    sys.exit()
+
+        # Desenha o fundo
+        screen.fill(BLACK)
+
+        # Desenha os botões
+        start_button = draw_text(screen, "Iniciar Jogo", 30, WHITE, (WIDTH // 2, HEIGHT // 2))
+        pygame.draw.rect(screen, WHITE, start_button.inflate(20, 10), 2)
+
+        exit_button = draw_text(screen, "Sair", 30, WHITE, (WIDTH // 2, HEIGHT // 2 + 60))
+        pygame.draw.rect(screen, WHITE, exit_button.inflate(20, 10), 2)
+
+        # Desenha o texto do menu principal
+        draw_text(screen, "Bem vindo ao", 50, WHITE, (WIDTH // 2, HEIGHT // 4))
+        draw_text(screen, "Slither game", 50, WHITE, (WIDTH // 2, HEIGHT // 4 + 60))
+
+        # Atualiza a tela
+        pygame.display.flip()
+
 # Função principal do jogo
-def main():
-    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over, semaphore_timer, semaphore_state, semaphore_color, semaphore_total_timer, FPS
+def game_logic():
+    global snake_segments, snake_direction, can_spawn_ball, score, is_paused, game_over
 
     # Inicialização da tela
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -132,6 +197,9 @@ def main():
 
     # Relógio para controle de FPS
     clock = pygame.time.Clock()
+
+    # Exibir o menu principal
+    main_menu(screen)
 
     # Reiniciar o jogo pela primeira vez
     restart_game()
@@ -147,9 +215,16 @@ def main():
                 if event.key in keys_pressed:
                     keys_pressed[event.key] = True
                 elif event.key == pygame.K_SPACE:
-                    is_paused = not is_paused
+                    with pause_semaphore:
+                        is_paused = not is_paused
                 elif event.key == pygame.K_r and game_over:
                     restart_game()
+                elif event.key == pygame.K_ESCAPE:
+                    if not game_over:
+                        is_paused = True
+                        pause_menu(screen)
+                        is_paused = False
+
             elif event.type == pygame.KEYUP:
                 if event.key in keys_pressed:
                     keys_pressed[event.key] = False
@@ -165,36 +240,35 @@ def main():
             elif keys_pressed[pygame.K_RIGHT] and snake_direction != 'LEFT':
                 snake_direction = 'RIGHT'
 
-            if snake_direction is not None and semaphore_color == RED:
-                game_over = True
-            else:
-                if snake_direction is not None:
-                    # Atualizar posição da cobra
-                    head_x, head_y = snake_segments[0]
-                    if snake_direction == 'UP':
-                        head_y -= SEGMENT_SIZE
-                    elif snake_direction == 'DOWN':
-                        head_y += SEGMENT_SIZE
-                    elif snake_direction == 'LEFT':
-                        head_x -= SEGMENT_SIZE
-                    elif snake_direction == 'RIGHT':
-                        head_x += SEGMENT_SIZE
+            # Atualizar posição da cobra
+            if snake_direction is not None:
+                head_x, head_y = snake_segments[0].copy()
+                if snake_direction == 'UP':
+                    head_y -= SEGMENT_SIZE
+                elif snake_direction == 'DOWN':
+                    head_y += SEGMENT_SIZE
+                elif snake_direction == 'LEFT':
+                    head_x -= SEGMENT_SIZE
+                elif snake_direction == 'RIGHT':
+                    head_x += SEGMENT_SIZE
 
-                    # Verificar colisão com as bordas da tela
-                    if head_x < 0 or head_x >= WIDTH or head_y < 0 or head_y >= HEIGHT:
-                        game_over = True
-                    else:
-                        snake_segments.insert(0, [head_x, head_y])
-                        snake_segments.pop()
+                # Verificar colisão com as bordas da tela
+                if head_x < 0 or head_x >= WIDTH or head_y < HUD_HEIGHT or head_y >= HEIGHT:
+                    game_over = True
+                else:
+                    snake_segments.insert(0, [head_x, head_y])
+                    snake_segments.pop()
 
-                    # Verificar colisão com as bolinhas e spawnar nova bolinha
-                    check_collision_and_spawn()
+                # Verificar colisão com as bolinhas e spawnar nova bolinha
+                check_collision_and_spawn()
 
         # Limpar a tela
         screen.fill(BLACK)
 
-        # Desenhar os elementos do jogo
-        draw_semaphore(screen, semaphore_color)
+        # Desenhar a borda do mapa
+        pygame.draw.rect(screen, WHITE, (0, HUD_HEIGHT, WIDTH, HEIGHT - HUD_HEIGHT), 5)
+
+        # Desenhar cobra
         for segment in snake_segments:
             pygame.draw.rect(screen, WHITE, (*segment, SEGMENT_SIZE, SEGMENT_SIZE))
 
@@ -202,45 +276,27 @@ def main():
         head_x, head_y = snake_segments[0]
         pygame.draw.circle(screen, DARK_RED, (head_x + SEGMENT_SIZE // 2, head_y + SEGMENT_SIZE // 2), 3)
 
+        # Desenhar bolinhas
         for ball in balls:
             screen.blit(ball_image, ball)
 
-        # Desenhar a borda do mapa
-        pygame.draw.rect(screen, WHITE, (0, 0, WIDTH, HEIGHT), 5)
-
+        # Verificar se o jogo acabou
         if game_over:
             draw_text(screen, "Você perdeu!", 50, RED, (WIDTH // 2, HEIGHT // 2))
             draw_text(screen, "Pressione 'R' para reiniciar", 30, WHITE, (WIDTH // 2, HEIGHT // 2 + 50))
         else:
             draw_text(screen, f"Pontuação: {score}", 30, WHITE, (WIDTH // 2, 30))
-            draw_text(screen, f"Tempo: {semaphore_total_timer - semaphore_timer:.1f}", 30, WHITE, (WIDTH - 100, 100))
 
         # Atualizar a tela
         pygame.display.flip()
 
-        if not game_over:
-            # Atualizar o contador do semáforo
-            semaphore_timer += 1 / FPS
-
-            # Lógica para mudar a cor do semáforo
-            if semaphore_state == 'GREEN' and semaphore_total_timer - semaphore_timer <= YELLOW_DURATION:
-                semaphore_state = 'YELLOW'
-                semaphore_color = YELLOW
-                semaphore_timer = 0
-                semaphore_total_timer = YELLOW_DURATION
-            elif semaphore_state == 'YELLOW' and semaphore_timer >= YELLOW_DURATION:
-                semaphore_state = 'RED'
-                semaphore_color = RED
-                semaphore_timer = 0
-                semaphore_total_timer = RED_INTERVAL
-            elif semaphore_state == 'RED' and semaphore_timer >= RED_INTERVAL:
-                semaphore_state = 'GREEN'
-                semaphore_color = GREEN
-                semaphore_timer = 0
-                semaphore_total_timer = GREEN_INTERVAL
-
         # Limitar o FPS
         clock.tick(FPS)
 
+# Função para iniciar o jogo em uma thread separada
+def start_game_thread():
+    threading.Thread(target=game_logic).start()
+
+# Função principal
 if __name__ == "__main__":
-    main()
+    start_game_thread()
